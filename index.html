@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>ストレス対処ノート</title>
+<meta name="description" content="上司や会社という「変えられないもの」に悩むのをやめ、自力で仕事の熱量をコントロールするための道具です。">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="対処ノート">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Kiwi+Maru:wght@500&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000000;
+    --surface:#0c0c0c;
+    --surface2:#151515;
+    --line:#232323;
+    --line2:#353535;
+    --text:#f5f5f3;
+    --sub:#a3a39f;
+    --mute:#62625e;
+    --accent:#a8ecd0;     /* ワンポイントカラー（ミント） */
+    --accent-dim:rgba(168,236,208,.12);
+    --warn:#f2c46d;
+    --danger:#ff7a6b;
+    --radius:16px;
+    --tabbar:68px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#000;color:var(--text);
+    font-family:"Inter","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;
+    font-size:15px;line-height:1.7;
+    -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  }
+  button,input,textarea{font:inherit;color:inherit}
+  button{cursor:pointer;background:none;border:none}
+  .num{font-family:"Inter",sans-serif;font-feature-settings:"tnum"}
+
+  /* ===== アプリ枠 ===== */
+  .app{max-width:430px;margin:0 auto;height:100dvh;background:var(--bg);position:relative;display:flex;flex-direction:column;overflow:hidden}
+  .header{
+    padding:calc(16px + env(safe-area-inset-top)) 20px 14px;
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line);
+  }
+  .header h1{font-size:17px;font-weight:800;letter-spacing:.04em}
+  .header .date{font-size:12px;color:var(--sub);letter-spacing:.04em}
+  .main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px calc(var(--tabbar) + 36px + env(safe-area-inset-bottom))}
+  .main::-webkit-scrollbar{display:none}
+  .panel{display:none}
+  .panel.active{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ===== 共通 ===== */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:12px}
+  .eyebrow{font-family:"Inter",sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.18em;color:var(--mute);text-transform:uppercase}
+  .sec-title{display:flex;align-items:baseline;gap:10px;font-size:14px;font-weight:700;margin:28px 4px 12px}
+  .sec-title .eyebrow{margin-left:auto}
+  .note{font-size:13px;color:var(--sub)}
+  .accent{color:var(--accent)}
+
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    padding:15px;border-radius:999px;background:var(--text);color:#000;
+    font-weight:700;font-size:15px;letter-spacing:.06em;transition:.15s;
+  }
+  .btn svg{width:16px;height:16px}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.25}
+  .btn-line{background:transparent;color:var(--text);border:1px solid var(--line2)}
+  .btn-sm{display:inline-flex;width:auto;padding:8px 16px;font-size:12.5px;font-weight:500;letter-spacing:.02em}
+  .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+  /* ===== 書くタブ ===== */
+
+  .pending{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);margin-bottom:12px;font-size:13px}
+  .pending .dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none;box-shadow:0 0 0 4px rgba(242,196,109,.15)}
+  .pending span{flex:1}
+  .pending svg{width:16px;height:16px;color:var(--mute)}
+
+  .editing{display:none;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:var(--accent-dim);color:var(--accent);font-size:13px;margin-bottom:12px}
+  .editing.show{display:flex}
+  .editing span{flex:1}
+  .editing button{font-size:12px;text-decoration:underline;color:var(--accent)}
+
+  .memo-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+  .memo-head h2{font-size:17px;font-weight:800;letter-spacing:.02em}
+  .q{padding:18px 0;border-top:1px solid var(--line)}
+  .q:first-of-type{border-top:none;padding-top:12px}
+  .q-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .q-num{font-family:"Inter";font-size:12px;font-weight:800;color:#000;background:var(--text);width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex:none}
+  .q-label{font-weight:700;font-size:15px}
+  .q-when{margin-left:auto;font-size:10.5px;color:var(--sub);border:1px solid var(--line2);border-radius:999px;padding:1px 9px;white-space:nowrap}
+  .q-when.later{color:var(--accent);border-color:rgba(168,236,208,.35)}
+  .sub-label{font-size:12px;color:var(--sub);margin:12px 0 8px}
+
+  textarea{
+    width:100%;min-height:76px;border:1px solid var(--line2);border-radius:12px;background:#000;
+    padding:12px 14px;font-size:15px;line-height:1.7;resize:none;outline:none;transition:.15s;
+  }
+  textarea:focus{border-color:var(--text)}
+  textarea::placeholder{color:var(--mute)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{padding:5px 13px;border-radius:999px;border:1px solid var(--line2);font-size:12.5px;color:var(--sub);transition:.15s}
+  .chip.on{background:var(--text);border-color:var(--text);color:#000;font-weight:700}
+
+  .levels{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .lv{padding:8px 0 6px;border-radius:10px;border:1px solid var(--line2);display:flex;flex-direction:column;align-items:center;line-height:1.2;transition:.15s}
+  .lv b{font-family:"Inter";font-size:16px;font-weight:800}
+  .lv span{font-size:9.5px;color:var(--mute);margin-top:3px;letter-spacing:-.02em}
+  .lv.on{background:var(--text);border-color:var(--text);color:#000}
+  .lv.on span{color:#000}
+
+  .actions{margin-top:6px}
+  .actions .btn+.btn{margin-top:8px}
+  .hint{font-size:12px;color:var(--mute);text-align:center;margin-top:10px}
+
+  /* ===== 説明タブ ===== */
+  .hero{padding:26px 20px 22px;background:radial-gradient(120% 90% at 100% 0%,rgba(168,236,208,.14),transparent 55%),var(--surface)}
+  .hero h2{font-size:23px;font-weight:800;line-height:1.45;letter-spacing:.01em;margin:10px 0 12px}
+  .hero p{font-size:14px;color:var(--sub)}
+  .hero p b{color:var(--text);font-weight:700}
+
+  .flow{list-style:none;position:relative}
+  .flow li{position:relative;padding:0 0 18px 40px}
+  .flow li:last-child{padding-bottom:0}
+  .flow li::before{content:"";position:absolute;left:11px;top:26px;bottom:2px;width:1px;background:var(--line2)}
+  .flow li:last-child::before{display:none}
+  .flow .n{position:absolute;left:0;top:0;width:23px;height:23px;border-radius:7px;background:var(--text);color:#000;font-family:"Inter";font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .flow .w{font-size:10.5px;color:var(--accent);letter-spacing:.06em}
+  .flow b{display:block;font-size:15px;line-height:1.5}
+  .flow p{font-size:13px;color:var(--sub)}
+
+  .tips{list-style:none}
+  .tips li{display:flex;gap:12px;font-size:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .tips li:first-child{padding-top:0}
+  .tips li:last-child{border-bottom:none;padding-bottom:0}
+  .tips li::before{content:"—";color:var(--accent);flex:none}
+
+  .quote{border:none;background:transparent;padding:4px 4px 4px 18px;border-left:2px solid var(--accent);border-radius:0;margin:6px 0 12px}
+  .quote p{font-size:14px;line-height:1.85}
+  .quote p+p{margin-top:10px}
+  .quote .muted{color:var(--sub)}
+
+  .care p{font-size:13px;color:var(--sub)}
+  .care p+p{margin-top:8px}
+  .care b{color:var(--text)}
+  .tool-row{display:flex;gap:8px;justify-content:center;margin-top:20px}
+
+  /* ===== ふりかえりタブ ===== */
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:16px}
+  .seg button{padding:7px 0;border-radius:999px;font-size:12.5px;color:var(--sub);transition:.15s}
+  .seg button.on{background:var(--text);color:#000;font-weight:700}
+
+  .summary{position:relative;overflow:hidden;background:radial-gradient(100% 80% at 0% 0%,rgba(168,236,208,.12),transparent 60%),var(--surface)}
+  .summary .eyebrow{color:var(--accent)}
+  .summary p.txt{font-size:14.5px;line-height:1.85;margin-top:8px}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 12px}
+  .stat .k{font-size:11px;color:var(--sub);line-height:1.4}
+  .stat .v{font-family:"Inter";font-size:26px;font-weight:800;line-height:1.2;margin-top:6px}
+  .stat .v small{font-size:11px;font-weight:500;color:var(--sub);margin-left:2px}
+  .stat.hl .v{color:var(--accent)}
+
+  .chart{display:flex;align-items:flex-end;gap:4px;height:120px}
+  .bc{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
+  .bw{flex:1;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+  .bar{width:70%;max-width:14px;border-radius:4px;background:var(--text);transition:height .5s ease;min-height:0}
+  .bar.today{background:var(--accent)}
+  .bar.zero{height:2px!important;background:var(--line2)}
+  .bc .c{font-family:"Inter";font-size:10px;color:var(--sub);margin-bottom:3px;height:14px}
+  .bc .d{font-family:"Inter";font-size:9.5px;color:var(--mute);margin-top:6px}
+  .bc .d.t{color:var(--accent);font-weight:700}
+  .legend{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:10px}
+
+  .rank{list-style:none}
+  .rank li{display:grid;grid-template-columns:96px 1fr 30px;align-items:center;gap:10px;font-size:13px;padding:6px 0}
+  .rank .track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+  .rank .fill{display:block;height:100%;background:var(--text);border-radius:3px}
+  .rank li:first-child .fill{background:var(--accent)}
+  .rank .n{font-family:"Inter";text-align:right;color:var(--sub);font-size:12px}
+
+  .coping{list-style:none}
+  .coping li{padding:12px 0;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+  .coping li:first-child{padding-top:0}
+  .coping li:last-child{border-bottom:none;padding-bottom:0}
+  .coping .tx{flex:1;font-size:14px}
+  .coping .tx small{display:block;font-size:11px;color:var(--mute)}
+
+  .badge{font-size:10.5px;padding:2px 9px;border-radius:999px;white-space:nowrap;border:1px solid var(--line2);color:var(--sub);flex:none}
+  .badge.good{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
+  .badge.some{border-color:rgba(168,236,208,.5);color:var(--accent)}
+  .badge.wait{border-color:rgba(242,196,109,.5);color:var(--warn)}
+
+  .entry{padding:0;overflow:hidden}
+  .entry-head{display:block;width:100%;text-align:left;padding:16px 18px}
+  .entry-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .entry-date{font-family:"Inter";font-size:12px;color:var(--sub);flex:1}
+  .entry-lv{font-family:"Inter";font-size:11px;color:var(--mute)}
+  .entry-text{font-size:14.5px;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .entry-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+  .tag{font-size:11px;padding:1px 8px;border-radius:6px;background:var(--surface2);color:var(--sub)}
+  .entry-body{display:none;padding:0 18px 18px}
+  .entry.open .entry-body{display:block}
+  .entry.open .entry-text{-webkit-line-clamp:unset}
+  .detail{border-top:1px solid var(--line);padding-top:4px}
+  .detail dt{display:flex;gap:8px;align-items:center;font-size:11.5px;font-weight:700;color:var(--sub);margin-top:12px}
+  .detail dt i{font-style:normal;font-family:"Inter";font-size:10px;color:#000;background:var(--sub);width:16px;height:16px;border-radius:5px;display:flex;align-items:center;justify-content:center}
+  .detail dd{font-size:14px;white-space:pre-wrap;word-break:break-word;margin-top:2px;padding-left:24px}
+  .detail dd.none{color:var(--mute)}
+  .entry-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .del{font-size:12px;color:var(--danger);margin-left:auto;padding:8px 4px}
+
+  .empty{text-align:center;padding:56px 20px;color:var(--sub)}
+  .empty svg{width:44px;height:44px;color:var(--mute);margin-bottom:12px}
+  .empty p{font-size:14px}
+
+  /* ===== 下部タブ ===== */
+  .tabbar{
+    position:absolute;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));
+    height:var(--tabbar);border-radius:22px;
+    background:rgba(18,18,18,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--line);
+    display:grid;grid-template-columns:1fr 1fr 1fr;padding:6px;
+  }
+  .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--mute);font-size:10.5px;border-radius:16px;transition:.2s}
+  .tab svg{width:22px;height:22px}
+  .tab.on{color:var(--text);font-weight:700}
+  .tab.center.on{background:var(--text);color:#000}
+
+  .toast{
+    position:absolute;left:50%;bottom:calc(var(--tabbar) + 24px + env(safe-area-inset-bottom));
+    transform:translate(-50%,16px);opacity:0;pointer-events:none;
+    background:var(--accent);color:#000;font-weight:700;font-size:13px;padding:10px 18px;border-radius:999px;
+    transition:.25s;white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  /* ===== ガイド ===== */
+  .g-hero{padding:8px 4px 22px}
+  .g-hero h2{font-size:25px;font-weight:800;line-height:1.45;margin:8px 0 10px}
+  .g-hero p:last-child{font-size:13.5px;color:var(--sub)}
+
+  .toc{border:1px solid var(--line2);border-radius:var(--radius);overflow:hidden;margin-bottom:8px}
+  .toc-ttl{font-size:11.5px;color:var(--sub);padding:12px 18px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .toc-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .toc-row:last-child{border-bottom:none}
+  .toc-row:active{background:var(--surface2)}
+  .toc-n{font-family:"Inter";font-size:22px;font-weight:800;color:var(--accent);width:32px;flex:none;line-height:1}
+  .toc-tx{flex:1;line-height:1.45}
+  .toc-tx b{display:block;font-size:15px}
+  .toc-tx small{font-size:12px;color:var(--sub)}
+  .toc-row svg{width:16px;height:16px;color:var(--mute);flex:none}
+
+  .g-nav{position:sticky;top:-18px;z-index:5;margin:0 -16px;padding:10px 16px;background:rgba(0,0,0,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:6px;border-bottom:1px solid var(--line);
+    opacity:0;pointer-events:none;transition:opacity .2s}
+  .g-nav.show{opacity:1;pointer-events:auto}
+  .g-nav button{font-size:12px;padding:7px 0;border-radius:999px;color:var(--sub);border:1px solid var(--line2)}
+  .g-nav button.on{background:var(--text);color:#000;border-color:var(--text);font-weight:700}
+
+  .gs{padding-top:40px;margin-top:12px}
+  .gs-head{display:flex;gap:14px;align-items:flex-start;padding:22px 0 18px;border-top:2px solid var(--text);margin-bottom:14px}
+  .gs-num{font-family:"Inter";font-size:46px;font-weight:800;line-height:.9;color:var(--accent);letter-spacing:-.03em;flex:none}
+  .gs-eye{font-family:"Inter";font-size:10.5px;font-weight:700;letter-spacing:.16em;color:var(--mute);text-transform:uppercase}
+  .gs-head h2{font-size:19px;word-break:keep-all;overflow-wrap:anywhere;font-weight:800;line-height:1.4;margin:2px 0 8px}
+  .gs-desc{font-size:13px;color:var(--sub);line-height:1.75}
+  .gs-desc b{color:var(--text)}
+  .gs-meta{font-size:11.5px;color:var(--mute);margin:0 2px 8px;letter-spacing:.04em}
+
+  .acc{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;overflow:hidden;transition:border-color .2s}
+  .acc[open]{border-color:var(--line2)}
+  .acc summary{list-style:none;display:flex;align-items:center;gap:14px;padding:15px 16px;cursor:pointer}
+  .acc summary::-webkit-details-marker{display:none}
+  .acc-n{width:26px;height:26px;border-radius:8px;border:1px solid var(--line2);font-family:"Inter";font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;color:var(--sub)}
+  .acc[open] .acc-n{background:var(--accent);border-color:var(--accent);color:#000}
+  .acc-tx{flex:1;line-height:1.45}
+  .acc-tx b{display:block;font-size:14.5px;font-weight:700}
+  .acc-tx small{display:block;font-size:12px;color:var(--sub);margin-top:2px}
+  .acc-i{width:18px;height:18px;position:relative;flex:none}
+  .acc-i::before,.acc-i::after{content:"";position:absolute;left:3px;right:3px;top:8px;height:1.6px;background:var(--sub);border-radius:2px;transition:.2s}
+  .acc-i::after{transform:rotate(90deg)}
+  .acc[open] .acc-i::after{transform:rotate(0)}
+  .acc-body{padding:4px 16px 18px 56px}
+
+  .pts{list-style:none}
+  .pts li{padding:12px 0;border-top:1px solid var(--line);font-size:13px;color:var(--sub);line-height:1.75}
+  .pts li:first-child{border-top:none;padding-top:4px}
+  .pts li b{display:block;color:var(--text);font-size:14px;margin-bottom:2px}
+  .lead-s{font-size:13.5px;color:var(--sub);margin-bottom:10px}
+  .lead-s b{color:var(--text)}
+  .dots{list-style:none}
+  .dots li{display:flex;gap:10px;padding:5px 0;font-size:13.5px}
+  .dots li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none;margin-top:9px}
+  .foot{font-size:12.5px;color:var(--sub);margin-top:12px;padding-top:12px;border-top:1px solid var(--line);line-height:1.8}
+
+  .ex{display:flex;flex-direction:column}
+  .ex span{position:relative;font-size:13px;padding:8px 12px;border:1px solid var(--line2);border-radius:10px}
+  .ex span+span{margin-top:18px}
+  .ex span+span::before{content:"↓";position:absolute;top:-18px;left:14px;font-size:11px;color:var(--mute);line-height:18px}
+  .ex .go{border-color:var(--accent);color:var(--accent)}
+  .tri .r{padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .tri .r:first-child{padding-top:0}
+  .tri .r:last-child{border-bottom:none}
+  .tri .r b{display:block;font-size:12px}
+  .tri .r span{color:var(--sub)}
+  .tri .a b{color:var(--accent)}
+  .tri .c b{color:var(--mute)}
+  .fact div{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .fact div:first-child{padding-top:0}
+  .fact div:last-child{border-bottom:none}
+  .fact em{font-style:normal;font-size:11px;font-weight:700;padding:1px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--sub);flex:none}
+  .fact div:first-child em{background:var(--text);color:#000;border-color:var(--text)}
+
+  /* ねこのひとこと（トーンを変える） */
+  .cat-talk{display:flex;gap:12px;align-items:flex-start;margin-top:56px;padding:24px 16px 20px;border-radius:22px;
+    background:#f4f1ea;color:#1c1c1c}
+  .cat-ava{width:52px;height:52px;border-radius:50%;background:#fff;border:1.5px solid #1c1c1c;display:flex;align-items:center;justify-content:center;flex:none;color:#1c1c1c}
+  .cat-ava svg{width:40px;height:40px}
+  .bubbles{flex:1;display:flex;flex-direction:column;gap:8px}
+  .cat-name{font-size:11px;font-weight:700;color:#7a756b;letter-spacing:.06em}
+  .bub{position:relative;background:#fff;border-radius:4px 16px 16px 16px;padding:11px 14px;font-size:13.5px;line-height:1.8;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+  .bub b{font-weight:700;background:linear-gradient(transparent 62%,rgba(63,170,140,.28) 62%)}
+  .bub.sm{font-size:12px;color:#5c584f;background:transparent;box-shadow:none;border:1px dashed #cfc9bc}
+  .bub .ref{display:block;font-size:11.5px;color:#7a756b;margin-top:6px}
+  /* ===== ふりかえり：分析/一覧 ===== */
+  .seg.two{grid-template-columns:1fr 1fr}
+  .seg .cnt{font-size:10.5px;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--surface2);color:var(--sub)}
+  .seg button.on .cnt{background:#000;color:var(--text)}
+  .more-note{font-size:12px;color:var(--mute);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+  .filters{display:flex;gap:6px;overflow-x:auto;margin-bottom:6px;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .flt{flex:none;font-size:12.5px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);color:var(--sub);display:flex;gap:6px;align-items:center}
+  .flt span{font-size:11px;color:var(--mute)}
+  .flt.on{background:var(--text);color:#000;border-color:var(--text);font-weight:700}
+  .flt.on span{color:#000}
+  .month{font-size:12px;font-weight:700;color:var(--sub);margin:20px 4px 8px;letter-spacing:.06em}
+  .rows{list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .row{border-top:1px solid var(--line)}
+  .row:first-child{border-top:none}
+  .row-head{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:13px 16px}
+  .row-head:active{background:var(--surface2)}
+  .row-date{width:30px;flex:none;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+  .row-date b{font-size:19px;font-weight:800}
+  .row-date small{font-size:10px;color:var(--mute);margin-top:2px}
+  .row-main{flex:1;min-width:0}
+  .row-ttl{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row-sub{display:flex;align-items:center;gap:0;font-size:11.5px;color:var(--sub);margin-top:2px;white-space:nowrap}
+  .row-sub .num{color:var(--mute)}
+  .st{width:7px;height:7px;border-radius:50%;margin-right:6px;flex:none}
+  .st.open,.st.tried{background:var(--warn)}
+  .st.done{background:var(--accent)}
+  .chev{width:16px;height:16px;color:var(--mute);flex:none;transition:.2s}
+  .row.open .chev{transform:rotate(180deg)}
+  .row-body{display:none;padding:0 16px 16px 60px}
+  .row.open{background:#080808}
+  .row.open .row-body{display:block}
+  .row.open .row-ttl{white-space:normal}
+  /* ===== タイトル画面 ===== */
+  .splash{position:absolute;inset:0;z-index:50;background:#000;display:flex;flex-direction:column;justify-content:center;align-items:stretch;text-align:center;
+    padding:calc(32px + env(safe-area-inset-top)) 28px calc(32px + env(safe-area-inset-bottom));overflow:hidden;transition:opacity .45s ease,transform .45s ease}
+  .splash.hide{opacity:0;transform:scale(1.02);pointer-events:none}
+  .sp-glow{position:absolute;width:420px;height:420px;right:-180px;top:-140px;border-radius:50%;
+    background:radial-gradient(circle,rgba(168,236,208,.22),transparent 65%);animation:glow 6s ease-in-out infinite alternate}
+  @keyframes glow{to{transform:translate(-30px,40px) scale(1.1)}}
+  .sp-inner{position:relative;display:flex;flex-direction:column;align-items:center}
+  .sp-inner > *{opacity:0;animation:rise .7s ease forwards}
+  .sp-eye{font-family:"Inter";font-size:11px;font-weight:700;letter-spacing:.24em;text-indent:.24em;text-transform:uppercase;color:var(--accent);animation-delay:.1s!important}
+  .sp-title{font-family:"Kiwi Maru","Zen Maru Gothic",serif;font-size:42px;font-weight:500;line-height:1.3;letter-spacing:.04em;margin:14px 0 22px;animation-delay:.22s!important}
+  .sp-bar{display:block;width:36px;height:3px;border-radius:3px;background:var(--accent);margin-bottom:22px;animation-delay:.34s!important}
+  .sp-desc{font-family:"Zen Maru Gothic",sans-serif;font-size:clamp(10px,3.15vw,12.5px);font-weight:500;line-height:2;color:var(--sub);white-space:nowrap;letter-spacing:0;animation-delay:.46s!important}
+  .sp-desc.sub{font-size:13px;font-weight:500;color:var(--sub);margin-top:14px;animation-delay:.58s!important}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .sp-btn{position:relative;margin-top:120px;font-family:"Zen Maru Gothic",sans-serif;opacity:0;animation:rise .7s ease .8s forwards}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="header">
+    <h1 id="pageTitle">記録する</h1>
+    <span class="date num" id="todayLabel"></span>
+  </header>
+
+  <main class="main" id="main">
+
+    <!-- ================= 使い方 ================= -->
+    <section class="panel" id="panel-guide">
+      <div class="g-hero">
+        <p class="eyebrow">Guide</p>
+        <h2>イライラを、<br>対処の<span class="accent">練習</span>に変える。</h2>
+        <p>嫌なことが起きたとき「自分には何もできない」という感覚を減らし、対処の選択肢を増やすためのノートです。</p>
+      </div>
+
+      <!-- 目次 -->
+      <div class="toc">
+        <p class="toc-ttl">このページで読めること</p>
+        <button class="toc-row" data-jump="g-memo">
+          <span class="toc-n">01</span>
+          <span class="toc-tx"><b>記録のしかた</b><small>4つの質問に答えるだけ</small></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <button class="toc-row" data-jump="g-motive">
+          <span class="toc-n">02</span>
+          <span class="toc-tx"><b>モチベが下がったときの対処法</b><small>4つのヒント</small></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <button class="toc-row" data-jump="g-train">
+          <span class="toc-n">03</span>
+          <span class="toc-tx"><b>実践できる5つのトレーニング</b><small>日々の練習メニュー</small></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+
+      <!-- 追従ナビ -->
+      <nav class="g-nav" id="gNav">
+        <button data-jump="g-memo">01 記録</button>
+        <button data-jump="g-motive">02 対処法</button>
+        <button data-jump="g-train">03 トレーニング</button>
+      </nav>
+
+      <!-- ===== SECTION 01 ===== -->
+      <section class="gs" id="g-memo">
+        <header class="gs-head">
+          <span class="gs-num">01</span>
+          <div>
+            <p class="gs-eye">Section 01 ・ How to</p>
+            <h2>記録のしかた</h2>
+            <p class="gs-desc">全部を一度にやる必要はありません。まずは<b>「記録して、落ち着いてから対処を考える」</b>ことから。</p>
+          </div>
+        </header>
+        <div class="card">
+          <ol class="flow">
+            <li><span class="n">1</span><span class="w">その場で</span><b>何が起きた？</b><p>出来事を事実だけ、短く。</p></li>
+            <li><span class="n">2</span><span class="w">その場で</span><b>何にイライラした？</b><p>出来事の「どこ」が引っかかったのか。</p></li>
+            <li><span class="n">3</span><span class="w">落ち着いてから</span><b>自分にできる対処は？</b><p>相手ではなく、自分が取れる行動を1つ。</p></li>
+            <li><span class="n">4</span><span class="w">試したあとで</span><b>結果はどうだった？</b><p>全部解決しなくてOK。少しでも進んだか。</p></li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ===== SECTION 02 ===== -->
+      <section class="gs" id="g-motive">
+        <header class="gs-head">
+          <span class="gs-num">02</span>
+          <div>
+            <p class="gs-eye">Section 02 ・ Recover</p>
+            <h2>モチベが下がったときの対処法</h2>
+            <p class="gs-desc">転職を我慢するためではなく、<b>転職以外にも自分を立て直す方法</b>を持つために。</p>
+          </div>
+        </header>
+        <p class="gs-meta">4項目 ・ タップで詳しく</p>
+
+        <details class="acc">
+          <summary><span class="acc-n">1</span><span class="acc-tx"><b>仕事の不安を減らす</b><small>成長を見える化し、わからないことは具体的に聞く</small></span><i class="acc-i"></i></summary>
+          <div class="acc-body">
+            <ul class="pts">
+              <li><b>成長・進捗を記録する</b>できるようになった業務、覚えたこと、一人で対応できた案件をメモ。見えにくい成長を、見える形に。</li>
+              <li><b>独り立ちの基準を聞く</b>「どの業務ができれば一人前か」を確認。基準がなければ、業務ごとに自分で目標を決める。</li>
+              <li><b>全体像は少しずつつかむ</b>案件ごとに「何のための仕事か・自分の役割・確認すること」を押さえる。一度に全部わからなくていい。</li>
+              <li><b>質問を具体的にする</b>「分かりません」ではなく「案件の目的と、確認する項目を教えてください」。次に動ける最低限の情報を取りにいく。</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span class="acc-n">2</span><span class="acc-tx"><b>イライラや意欲低下に対処する</b><small>嫌なことの直後に、大きな決断をしない</small></span><i class="acc-i"></i></summary>
+          <div class="acc-body">
+            <ul class="pts">
+              <li><b>嫌なことの直後に、転職を決めない</b>まず落ち着いて、何が嫌だったのかを整理。ただし、健康や安全に関わることまで我慢する必要はありません。</li>
+              <li><b>「嫌なこと」と「耐えられないこと」を分ける</b>工夫すれば対処できるのか、職場の体質として自分では変えられないのかを考える。</li>
+              <li><b>変えられる範囲に集中する</b>上司の性格や会社の方針より、自分の進め方・確認の仕方・記録の取り方に力を使う。</li>
+              <li><b>仕事以外で回復する時間をつくる</b>趣味や休息で頭を切り替える。問題を解決することと、ストレスから回復することは別もの。</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span class="acc-n">3</span><span class="acc-tx"><b>職場に働きかける</b><small>困りごとは改善案とセットで、情報は自分から</small></span><i class="acc-i"></i></summary>
+          <div class="acc-body">
+            <ul class="pts">
+              <li><b>困りごとは、改善案とセットで相談する</b>いきなり会社全体を変えようとせず、小さな業務改善から。</li>
+              <li><b>必要な情報は、自分から取りにいく</b>指示が曖昧なら「目的・担当範囲・期限・確認事項」を聞く。それでも説明してもらえないなら、あなたの努力だけでは解決できない問題として区別していい。</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span class="acc-n">4</span><span class="acc-tx"><b>改善しないときの判断基準を持つ</b><small>試した結果を振り返り、続けるか見直すかを決める</small></span><i class="acc-i"></i></summary>
+          <div class="acc-body">
+            <ul class="pts">
+              <li><b>試した結果を振り返る</b>何が変わり、何が変わらなかったか。一時的なものか、同じ問題が繰り返されているか。</li>
+              <li><b>定期的に働きやすさを見直す</b>たとえば月末に「成長を実感できたか」「必要な情報を得られるか」「ストレスから回復できているか」。期間は状況に合わせて。</li>
+              <li><b>転職以外の選択肢も確認する</b>担当業務の変更、上司への相談、進め方の調整。それでも合わず負担が続くなら、転職を具体的に検討する。</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <!-- ===== SECTION 03 ===== -->
+      <section class="gs" id="g-train">
+        <header class="gs-head">
+          <span class="gs-num">03</span>
+          <div>
+            <p class="gs-eye">Section 03 ・ Training</p>
+            <h2>実践できる5つのトレーニング</h2>
+            <p class="gs-desc">気になるものを<b>1つだけ</b>選んで試してみてください。</p>
+          </div>
+        </header>
+        <p class="gs-meta">5項目 ・ タップで詳しく</p>
+
+        <details class="acc">
+          <summary><span class="acc-n">1</span><span class="acc-tx"><b>イライラしたときに結論を出さない</b><small>怒ったままで、大きな決断をしない</small></span><i class="acc-i"></i></summary>
+          <div class="acc-body">
+            <p class="lead-s">怒りをなくすのではなく、<b>怒りがある状態で大きな決断をしない</b>練習です。</p>
+            <ul class="dots">
+              <li>その場で転職サイトを開いたり、退職を決めたりしない</li>
+              <li>「上司に腹が立っている」「先が見えなくて不安」と、感情の正体を言葉にする</li>
+              <li>深呼吸・少し歩く・休憩するなどで、体の緊張をゆるめる</li>
+              <li>落ち着いてから、必要な対応を考える</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span class="acc-n">2</span><span class="acc-tx"><b>「不快だけど対処できた」経験を積む</b><small>小さな不快から、対処できた実感を増やす</small></span><i class="acc-i"></i></summary>
+          <div class="acc-body">
+            <p class="lead-s">ストレスへの強さは、考え方だけでなく実際の経験からも育ちます。</p>
+            <div class="ex">
+              <span>説明不足でイライラした</span>
+              <span>必要な情報を質問し、確認事項を整理した</span>
+              <span class="go">納得しきれなくても、案件をひとつ進められた</span>
+            </div>
+            <p class="foot">最初から大きな理不尽に耐えなくていい。「環境を変えなくても対処できることがある」という実感が、選択肢を増やします。</p>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span class="acc-n">3</span><span class="acc-tx"><b>変えられること・変えられないことを分ける</b><small>問題を3つに仕分けて、力の使いどころを決める</small></span><i class="acc-i"></i></summary>
+          <div class="acc-body">
+            <div class="tri">
+              <div class="r a"><b>自分で変えられる</b><span>質問の仕方、仕事の記録、確認の手順</span></div>
+              <div class="r b"><b>相談すれば変わるかも</b><span>指示の出し方、報告のタイミング、業務の進め方</span></div>
+              <div class="r c"><b>自分では変えられない</b><span>上司の性格、会社の方針、業界全体の状況</span></div>
+            </div>
+            <p class="foot">諦めて我慢するためではありません。変える努力をする価値があるのか、距離を取るべきなのかを判断するための区別です。</p>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span class="acc-n">4</span><span class="acc-tx"><b>「納得できないまま進める」練習</b><small>わからないことがあっても、できる範囲は進める</small></span><i class="acc-i"></i></summary>
+          <div class="acc-body">
+            <p class="lead-s">仕事は、すべてを理解してから動けるとは限りません。</p>
+            <ul class="dots">
+              <li>今わかっていることだけで、できる範囲を進める</li>
+              <li>不明点はひとつずつ確認する</li>
+              <li>納得しきれなくても、目的に必要な作業は進める</li>
+              <li>あとから理解できることもある、と考える</li>
+            </ul>
+            <p class="foot">見切り発車とは違います。安全や重要な判断に関わる部分は確認し、確認できないときはそう伝えましょう。</p>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span class="acc-n">5</span><span class="acc-tx"><b>仕事の評価と、自分の評価を切り離す</b><small>「事実」と「解釈・予測」を分けて考える</small></span><i class="acc-i"></i></summary>
+          <div class="acc-body">
+            <div class="fact">
+              <div><em>事実</em><span>今日は説明不足で仕事が進まなかった</span></div>
+              <div><em>解釈</em><span>自分はこの仕事に向いていない</span></div>
+              <div><em>予測</em><span>この会社では一生成長できない</span></div>
+            </div>
+            <p class="foot">「解釈」と「予測」はまだ確定していません。区別するだけで、ひとつの嫌な出来事が将来への絶望にまで膨らむのを防ぎやすくなります。</p>
+          </div>
+        </details>
+
+        <button class="btn" id="goWrite" style="margin-top:20px">メモで練習してみる</button>
+      </section>
+
+      <!-- ===== ねこのひとこと ===== -->
+      <section class="cat-talk">
+        <div class="cat-ava" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 33 L15 13 L25.5 22.5 Q32 20.5 38.5 22.5 L49 13 L51 33 Q51 49 32 49 Q13 49 13 33 Z"/>
+            <path d="M23 33 q2.5 -2.6 5 0"/><path d="M36 33 q2.5 -2.6 5 0"/>
+            <path d="M30.5 38.5 L32 40 L33.5 38.5"/>
+            <path d="M7 36 h8"/><path d="M8 41 l7 -2"/><path d="M57 36 h-8"/><path d="M56 41 l-7 -2"/>
+          </svg>
+        </div>
+        <div class="bubbles">
+          <p class="cat-name">ノートねこ</p>
+          <div class="bub">この練習はね、<b>どんな職場でも耐えられる人になるため</b>のものじゃないよ。</div>
+          <div class="bub">自分をすり減らさずに対処できる範囲を広げて、本当に環境を変えたほうがいいときに、<b>自分で判断できるようになるため</b>のものなんだ。</div>
+          <div class="bub">自分でできることは試す。でも、職場側に原因があることまで「自分の努力不足」だと思わなくていいからね。</div>
+          <div class="bub">ストレスがすごく強かったり、仕事のことが頭から離れない、眠れない…そんなときは、ひとりで抱えないで。カウンセラーなどの専門家に相談するのも立派な選択肢だよ。<span class="ref">相談先の例：厚生労働省「こころの耳」</span></div>
+          <div class="bub sm">書いた記録は、この端末のブラウザの中にだけ保存されるよ。外には送られないから安心してね。</div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= 記録する（メイン） ================= -->
+    <section class="panel active" id="panel-write">
+
+      <div id="pendingBox"></div>
+
+      <div class="editing" id="editing">
+        <span id="editingText"></span>
+        <button id="cancelEdit">やめる</button>
+      </div>
+
+      <div class="card">
+        <div class="memo-head">
+          <h2>ストレス対処メモ</h2>
+          <span class="eyebrow">Memo</span>
+        </div>
+
+        <div class="q">
+          <div class="q-head"><span class="q-num">1</span><span class="q-label">何が起きた？</span><span class="q-when">その場で</span></div>
+          <textarea id="fEvent" placeholder="例：説明がないまま電話を急かされた"></textarea>
+        </div>
+
+        <div class="q">
+          <div class="q-head"><span class="q-num">2</span><span class="q-label">何にイライラした？</span><span class="q-when">その場で</span></div>
+          <textarea id="fIrritation" placeholder="例：何もわからないのに急かされたこと"></textarea>
+          <p class="sub-label">近いものを選ぶ（任意・複数OK）</p>
+          <div class="chips" id="tags"></div>
+          <p class="sub-label">イライラ度（任意）</p>
+          <div class="levels" id="levels"></div>
+        </div>
+
+        <div class="q">
+          <div class="q-head"><span class="q-num">3</span><span class="q-label">自分にできる対処は？</span><span class="q-when later">落ち着いてから</span></div>
+          <textarea id="fAction" placeholder="例：確認事項を絞って質問する"></textarea>
+        </div>
+
+        <div class="q">
+          <div class="q-head"><span class="q-num">4</span><span class="q-label">結果はどうだった？</span><span class="q-when later">試したあとで</span></div>
+          <textarea id="fResult" placeholder="例：全部は解決しなかったが、次の作業には進めた"></textarea>
+          <p class="sub-label">手ごたえ（任意）</p>
+          <div class="chips" id="outcomes"></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="saveBtn" disabled>保存する</button>
+          <p class="hint" id="saveHint">1か2を書くと保存できます。3・4はあとからでOK</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ふりかえり ================= -->
+    <section class="panel" id="panel-log">
+      <div class="seg two" id="viewSeg">
+        <button data-v="analysis" class="on">分析</button>
+        <button data-v="list">記録一覧<span class="cnt num" id="listCnt"></span></button>
+      </div>
+      <div id="logContent"></div>
+    </section>
+  </main>
+
+  <!-- ================= 下部タブ ================= -->
+  <nav class="tabbar">
+    <button class="tab" data-tab="guide">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>
+      ガイド
+    </button>
+    <button class="tab center on" data-tab="write">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+      記録する
+    </button>
+    <button class="tab" data-tab="log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M21 20H3"/></svg>
+      ふりかえり
+    </button>
+  </nav>
+
+  <!-- ================= タイトル画面 ================= -->
+  <div class="splash" id="splash">
+    <div class="sp-glow"></div>
+    <div class="sp-inner">
+      <p class="sp-eye">Stress Coping Note</p>
+      <h1 class="sp-title">ストレス<br>対処ノート</h1>
+      <span class="sp-bar"></span>
+      <p class="sp-desc">上司や会社という「変えられないもの」に悩むのをやめ、<br>自力で仕事の熱量をコントロールするための道具です。</p>
+    </div>
+    <button class="btn sp-btn" id="splashBtn">記録する</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(() => {
+  /* ---------- 設定 ---------- */
+  const KEY = 'stress-memo-v2';
+  const TAGS = ['説明がない','急かされた','否定された','指示があいまい','理不尽','仕事を振られた','話を聞いてもらえない','無視された','その他'];
+  const LEVELS = ['少し','やや','かなり','強い','限界'];
+  const OUTCOMES = [['good','うまくいった'],['some','少し進んだ'],['none','変わらなかった']];
+  const OUT_LABEL = Object.fromEntries(OUTCOMES);
+  const WEEK = ['日','月','火','水','木','金','土'];
+  const TITLES = {guide:'ガイド', write:'記録する', log:'ふりかえり'};
+
+  /* ---------- 保存（端末内） ---------- */
+  let memory = [];
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { return memory; } };
+  const save = (list) => { memory = list; try { localStorage.setItem(KEY, JSON.stringify(list)); } catch(e) {} };
+  let entries = load();
+
+  /* ---------- ユーティリティ ---------- */
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const startOfDay = (d) => { d = new Date(d); d.setHours(0,0,0,0); return d; };
+  const dayKey = (d) => startOfDay(d).getTime();
+  const fmtDate = (d) => { d = new Date(d); return `${d.getMonth()+1}/${d.getDate()} ${WEEK[d.getDay()]}`; };
+  const fmtTime = (d) => { d = new Date(d); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+  const status = (e) => e.result ? 'done' : e.action ? 'tried' : 'open';
+
+  let toastTimer;
+  function toast(msg){
+    const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  function copyText(text){
+    const done = () => toast('コピーしました');
+    if (navigator.clipboard && window.isSecureContext){
+      navigator.clipboard.writeText(text).then(done).catch(() => fallback());
+    } else fallback();
+    function fallback(){
+      const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch(e) { toast('コピーできませんでした'); }
+      ta.remove();
+    }
+  }
+  function memoText(e){
+    const d = e.date ? `（${fmtDate(e.date)} ${fmtTime(e.date)}）` : '';
+    return `ストレス対処メモ${d}\n` +
+      `1. 何が起きた？\n${e.event || '-'}\n` +
+      `2. 何にイライラした？\n${e.irritation || '-'}\n` +
+      `3. 自分にできる対処は？\n${e.action || '-'}\n` +
+      `4. 結果はどうだった？\n${e.result || '-'}${e.outcome ? `（${OUT_LABEL[e.outcome]}）` : ''}`;
+  }
+
+  const now = new Date();
+  $('#todayLabel').textContent = `${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()} ${WEEK[now.getDay()]}`;
+
+  /* ---------- タブ ---------- */
+  function switchTab(name){
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+    $('#pageTitle').textContent = TITLES[name];
+    $('#main').scrollTop = 0;
+    if (name === 'log') renderLog();
+    if (name === 'write') renderWriteTop();
+  }
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+  /* ---------- 記録する：上部 ---------- */
+  function renderWriteTop(){
+    // 対処待ち
+    const open = entries.filter(e => status(e) !== 'done');
+    $('#pendingBox').innerHTML = open.length && !editingId ? `
+      <button class="pending" id="toPending"><i class="dot"></i>
+        <span>対処・結果がまだの記録が <b class="num">${open.length}</b> 件あります</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>` : '';
+    const btn = $('#toPending'); if (btn) btn.onclick = () => { filter = 'open'; view = 'list'; switchTab('log'); setView('list'); };
+  }
+
+  /* ---------- 記録する：フォーム ---------- */
+  const form = { tags: new Set(), level: 0, outcome: '' };
+  let editingId = null;
+
+  $('#tags').innerHTML = TAGS.map(t => `<button class="chip" data-v="${t}">${t}</button>`).join('');
+  $('#tags').addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    const v = b.dataset.v; form.tags.has(v) ? form.tags.delete(v) : form.tags.add(v);
+    b.classList.toggle('on', form.tags.has(v));
+  });
+
+  $('#levels').innerHTML = LEVELS.map((l,i) => `<button class="lv" data-v="${i+1}"><b>${i+1}</b><span>${l}</span></button>`).join('');
+  $('#levels').addEventListener('click', e => {
+    const b = e.target.closest('.lv'); if (!b) return;
+    form.level = form.level === +b.dataset.v ? 0 : +b.dataset.v;
+    document.querySelectorAll('.lv').forEach(x => x.classList.toggle('on', +x.dataset.v === form.level));
+  });
+
+  $('#outcomes').innerHTML = OUTCOMES.map(([k,l]) => `<button class="chip" data-v="${k}">${l}</button>`).join('');
+  $('#outcomes').addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    form.outcome = form.outcome === b.dataset.v ? '' : b.dataset.v;
+    document.querySelectorAll('#outcomes .chip').forEach(x => x.classList.toggle('on', x.dataset.v === form.outcome));
+  });
+
+  const fields = ['#fEvent','#fIrritation','#fAction','#fResult'];
+  const autoGrow = (ta) => { ta.style.height = 'auto'; ta.style.height = Math.max(76, ta.scrollHeight + 2) + 'px'; };
+  fields.forEach(s => $(s).addEventListener('input', e => { autoGrow(e.target); updateSave(); }));
+
+  function updateSave(){
+    const ok = $('#fEvent').value.trim() || $('#fIrritation').value.trim();
+    $('#saveBtn').disabled = !ok;
+  }
+
+  function currentForm(){
+    return {
+      event: $('#fEvent').value.trim(),
+      irritation: $('#fIrritation').value.trim(),
+      action: $('#fAction').value.trim(),
+      result: $('#fResult').value.trim(),
+      tags: [...form.tags], level: form.level, outcome: form.outcome
+    };
+  }
+
+  function fillForm(e){
+    $('#fEvent').value = e.event || ''; $('#fIrritation').value = e.irritation || '';
+    $('#fAction').value = e.action || ''; $('#fResult').value = e.result || '';
+    form.tags = new Set(e.tags || []); form.level = e.level || 0; form.outcome = e.outcome || '';
+    document.querySelectorAll('#tags .chip').forEach(x => x.classList.toggle('on', form.tags.has(x.dataset.v)));
+    document.querySelectorAll('.lv').forEach(x => x.classList.toggle('on', +x.dataset.v === form.level));
+    document.querySelectorAll('#outcomes .chip').forEach(x => x.classList.toggle('on', x.dataset.v === form.outcome));
+    fields.forEach(s => autoGrow($(s)));
+    updateSave();
+  }
+
+  function resetForm(){
+    editingId = null;
+    fillForm({});
+    $('#editing').classList.remove('show');
+    $('#saveBtn').textContent = '保存する';
+  }
+
+  function startEdit(id){
+    const e = entries.find(x => x.id === id); if (!e) return;
+    editingId = id;
+    switchTab('write');
+    fillForm(e);
+    $('#editingText').textContent = `${fmtDate(e.date)} ${fmtTime(e.date)} の記録の続きを書いています`;
+    $('#editing').classList.add('show');
+    $('#saveBtn').textContent = '更新する';
+    renderWriteTop();
+    setTimeout(() => { const t = !e.action ? '#fAction' : '#fResult'; $(t).scrollIntoView({behavior:'smooth', block:'center'}); }, 150);
+  }
+  $('#cancelEdit').addEventListener('click', () => { resetForm(); renderWriteTop(); });
+
+  $('#saveBtn').addEventListener('click', () => {
+    const data = currentForm();
+    if (!data.event && !data.irritation) return;
+    if (editingId){
+      entries = entries.map(e => e.id === editingId ? {...e, ...data, updated: new Date().toISOString()} : e);
+      toast('更新しました');
+    } else {
+      entries.unshift({ id: Date.now().toString(36), date: new Date().toISOString(), ...data });
+      toast(data.action ? '保存しました。おつかれさまでした' : '保存しました。落ち着いたら3・4を');
+    }
+    save(entries);
+    resetForm();
+    setTimeout(() => { filter = 'all'; switchTab('log'); setView('list'); }, 450);
+  });
+
+
+  /* ---------- ふりかえり ---------- */
+  let view = 'analysis';
+  let filter = 'all';
+  function setView(v){
+    view = v;
+    document.querySelectorAll('#viewSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === v));
+    $('#main').scrollTop = 0;
+    renderLog();
+  }
+  $('#viewSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
+
+  function countTop(list, n = 4){
+    const c = {};
+    list.forEach(e => (e.tags || []).forEach(t => c[t] = (c[t] || 0) + 1));
+    return Object.entries(c).sort((a,b) => b[1] - a[1]).slice(0, n);
+  }
+
+  function makeSummary(list){
+    const n = list.length;
+    const acted = list.filter(e => e.action).length;
+    const done = list.filter(e => e.result).length;
+    const moved = list.filter(e => e.outcome === 'good' || e.outcome === 'some').length;
+    const open = n - acted;
+    const top = countTop(list, 1)[0];
+
+    let s = `これまでに${n}件のイライラを記録しました。`;
+    if (top) s += `引っかかりやすいのは「${top[0]}」のようです。`;
+    if (acted) s += `そのうち${acted}件で自分にできる対処を考え、${done}件は結果まで振り返れています。`;
+    if (moved) s += `対処してみて「少しでも進んだ」ケースが${moved}件。できることは、ちゃんとあります。`;
+    else if (done) s += '結果がすぐに出なくても、選択肢を考えたこと自体が練習になっています。';
+    if (open) s += `まだ対処を考えていない記録が${open}件。落ち着いたら続きを書いてみましょう。`;
+
+    const lv = list.filter(e => e.level);
+    if (lv.length >= 3 && lv.reduce((a,e) => a + e.level, 0) / lv.length >= 4){
+      s += 'イライラ度が高い日が続いています。無理をせず、必要なら誰かに相談することも考えてみてください。';
+    }
+    return s;
+  }
+
+  function chart14(){
+    const days = [];
+    for (let i = 13; i >= 0; i--){
+      const d = startOfDay(new Date()); d.setDate(d.getDate() - i);
+      const c = entries.filter(e => dayKey(e.date) === d.getTime()).length;
+      days.push({d, c, today: i === 0});
+    }
+    const max = Math.max(3, ...days.map(x => x.c));
+    return `<div class="chart">${days.map(x => `
+      <div class="bc">
+        <div class="bw"><span class="c">${x.c || ''}</span><div class="bar ${x.today ? 'today' : ''} ${x.c ? '' : 'zero'}" style="height:${x.c / max * 85}%"></div></div>
+        <span class="d ${x.today ? 't' : ''}">${x.today ? '今日' : x.d.getDate()}</span>
+      </div>`).join('')}</div>
+      <div class="legend"><span>1日あたりの記録数</span><span>直近14日</span></div>`;
+  }
+
+  function rankList(top){
+    if (!top.length) return '<p class="note">「近いものを選ぶ」を使うと、ここに傾向が出ます。</p>';
+    const max = top[0][1];
+    return `<ul class="rank">${top.map(([k,v]) =>
+      `<li><span>${esc(k)}</span><span class="track"><span class="fill" style="width:${v / max * 100}%"></span></span><span class="n">${v}</span></li>`).join('')}</ul>`;
+  }
+
+  function badge(e){
+    const st = status(e);
+    if (st === 'open') return '<span class="badge wait">対処を考える前</span>';
+    if (st === 'tried') return '<span class="badge wait">結果待ち</span>';
+    if (e.outcome === 'good') return '<span class="badge good">うまくいった</span>';
+    if (e.outcome === 'some') return '<span class="badge some">少し進んだ</span>';
+    if (e.outcome === 'none') return '<span class="badge">変わらなかった</span>';
+    return '<span class="badge some">振り返り済み</span>';
+  }
+
+  function renderLog(){
+    const box = $('#logContent');
+    $('#listCnt').textContent = entries.length ? entries.length : '';
+
+    if (!entries.length){
+      box.innerHTML = `<div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M21 20H3"/></svg>
+        <p>まだ記録がありません。<br>イライラしたら「記録する」から書いてみましょう。</p></div>`;
+      return;
+    }
+    box.innerHTML = view === 'analysis' ? analysisHTML() : listHTML();
+  }
+
+  /* --- 分析 --- */
+  function analysisHTML(){
+    const list = entries;
+    const acted = list.filter(e => e.action).length;
+    const done = list.filter(e => e.result).length;
+    const cop = list.filter(e => e.action);
+    const COP_MAX = 5;
+    return `
+      <div class="card summary"><p class="eyebrow">Summary</p><p class="txt">${esc(makeSummary(list))}</p></div>
+      <div class="stats">
+        <div class="stat"><p class="k">記録</p><p class="v">${list.length}<small>件</small></p></div>
+        <div class="stat hl"><p class="k">対処を考えた</p><p class="v">${acted}<small>件</small></p></div>
+        <div class="stat"><p class="k">結果まで</p><p class="v">${done}<small>件</small></p></div>
+      </div>
+
+      <h3 class="sec-title">記録した回数<span class="eyebrow">Activity</span></h3>
+      <div class="card">${chart14()}</div>
+
+      <h3 class="sec-title">イライラしやすいポイント<span class="eyebrow">Trigger</span></h3>
+      <div class="card">${rankList(countTop(list))}</div>
+
+      <h3 class="sec-title">あなたの対処リスト<span class="eyebrow">Options</span></h3>
+      <div class="card">${cop.length
+        ? `<ul class="coping">${cop.slice(0, COP_MAX).map(e => `<li><span class="tx"><small class="num">${fmtDate(e.date)}</small>${esc(e.action)}</span>${badge(e)}</li>`).join('')}</ul>`
+          + (cop.length > COP_MAX ? `<p class="more-note">ほか${cop.length - COP_MAX}件は「記録一覧」から見られます</p>` : '')
+        : `<p class="note">まだありません。記録の続きから「自分にできる対処」を考えてみましょう。ここに溜まっていくのが、あなたの選択肢です。</p>`}
+      </div>
+
+      <button class="btn btn-line" data-goto="list" style="margin-top:20px">記録一覧を見る</button>`;
+  }
+
+  /* --- 記録一覧（リスト） --- */
+  const FILTERS = [['all','すべて'],['open','対処前'],['tried','結果待ち'],['done','完了']];
+  function listHTML(){
+    const counts = {all: entries.length, open:0, tried:0, done:0};
+    entries.forEach(e => counts[status(e)]++);
+    const list = filter === 'all' ? entries : entries.filter(e => status(e) === filter);
+
+    let html = `<div class="filters">${FILTERS.map(([k,l]) =>
+      `<button class="flt ${filter === k ? 'on' : ''}" data-f="${k}">${l}<span class="num">${counts[k]}</span></button>`).join('')}</div>`;
+
+    if (!list.length) return html + `<div class="card"><p class="note">該当する記録はありません。</p></div>`;
+
+    let month = '';
+    list.forEach((e, i) => {
+      const d = new Date(e.date);
+      const m = `${d.getFullYear()}年${d.getMonth()+1}月`;
+      if (m !== month){
+        if (month) html += `</ul>`;
+        month = m;
+        html += `<p class="month">${m}</p><ul class="rows">`;
+      }
+      const st = status(e);
+      const row = (n, label, val, extra = '') =>
+        `<dt><i>${n}</i>${label}</dt><dd class="${val ? '' : 'none'}">${val ? esc(val) + extra : 'まだ書いていません'}</dd>`;
+      html += `
+        <li class="row" data-id="${e.id}">
+          <button class="row-head">
+            <span class="row-date"><b class="num">${d.getDate()}</b><small>${WEEK[d.getDay()]}</small></span>
+            <span class="row-main">
+              <span class="row-ttl">${esc(e.event || e.irritation)}</span>
+              <span class="row-sub"><span class="st ${st}"></span>${stLabel(e)}<span class="num">・${fmtTime(e.date)}</span>${e.level ? `<span class="num">・Lv.${e.level}</span>` : ''}</span>
+            </span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="row-body">
+            ${(e.tags || []).length ? `<div class="entry-tags" style="margin:0 0 4px">${e.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+            <dl class="detail">
+              ${row(1,'何が起きた？',e.event)}
+              ${row(2,'何にイライラした？',e.irritation)}
+              ${row(3,'自分にできる対処は？',e.action)}
+              ${row(4,'結果はどうだった？',e.result, e.outcome ? `（${OUT_LABEL[e.outcome]}）` : '')}
+            </dl>
+            <div class="entry-actions">
+              ${st !== 'done' ? `<button class="btn btn-sm" data-edit="${e.id}">続きを書く</button>` : `<button class="btn btn-line btn-sm" data-edit="${e.id}">編集</button>`}
+              <button class="btn btn-line btn-sm" data-copy="${e.id}">コピー</button>
+              <button class="del" data-del="${e.id}">削除</button>
+            </div>
+          </div>
+        </li>`;
+    });
+    return html + `</ul>`;
+  }
+  function stLabel(e){
+    const st = status(e);
+    if (st === 'open') return '対処を考える前';
+    if (st === 'tried') return '結果待ち';
+    return e.outcome ? OUT_LABEL[e.outcome] : '振り返り済み';
+  }
+
+  $('#logContent').addEventListener('click', ev => {
+    const t = ev.target;
+    const ed = t.closest('[data-edit]'); if (ed) return startEdit(ed.dataset.edit);
+    const cp = t.closest('[data-copy]'); if (cp) return copyText(memoText(entries.find(e => e.id === cp.dataset.copy)));
+    const del = t.closest('[data-del]');
+    if (del){
+      if (confirm('この記録を削除しますか？')){
+        entries = entries.filter(x => x.id !== del.dataset.del);
+        if (editingId === del.dataset.del) resetForm();
+        save(entries); renderLog(); toast('削除しました');
+      }
+      return;
+    }
+    const go = t.closest('[data-goto]'); if (go) return setView(go.dataset.goto);
+    const f = t.closest('[data-f]'); if (f){ filter = f.dataset.f; return renderLog(); }
+    const head = t.closest('.row-head'); if (head) head.parentElement.classList.toggle('open');
+  });
+
+  /* ---------- ガイド ---------- */
+  const main = $('#main');
+  document.querySelectorAll('[data-jump]').forEach(b => b.addEventListener('click', () => {
+    const t = document.getElementById(b.dataset.jump);
+    main.scrollTo({top: t.offsetTop - 64, behavior: 'smooth'});
+  }));
+  $('#goWrite').addEventListener('click', () => switchTab('write'));
+  const navBtns = document.querySelectorAll('#gNav button');
+  const secs = ['g-memo','g-motive','g-train'].map(id => document.getElementById(id));
+  main.addEventListener('scroll', () => {
+    if (!$('#panel-guide').classList.contains('active')) return;
+    let cur = -1;
+    secs.forEach((el,i) => { if (el.offsetTop - 120 <= main.scrollTop) cur = i; });
+    navBtns.forEach((b,i) => b.classList.toggle('on', i === cur));
+    $('#gNav').classList.toggle('show', main.scrollTop > secs[0].offsetTop - 140);
+  }, {passive:true});
+
+  /* ---------- タイトル画面 ---------- */
+  const SEEN_KEY = 'stress-memo-seen';
+  let seenMem = false;
+  const isFirst = () => { try { return !localStorage.getItem(SEEN_KEY); } catch(e) { return !seenMem; } };
+  $('#splashBtn').addEventListener('click', () => {
+    const first = isFirst();
+    try { localStorage.setItem(SEEN_KEY, '1'); } catch(e) { seenMem = true; }
+    switchTab(first ? 'guide' : 'write');
+    $('#splash').classList.add('hide');
+    setTimeout(() => $('#splash').remove(), 500);
+  });
+
+  renderWriteTop();
+})();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  }
+</script>
+</body>
+</html>
